@@ -1,191 +1,132 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { AgGridReact } from 'ag-grid-react'
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { useMutualFunds } from '../hooks/useMutualFunds'
-import SearchBar from './SearchBar'
-import MutualFundTableRow from './MutualFundTableRow'
-import Pagination from './Pagination'
-import TableHeader from './TableHeader'
-import LoadingSpinner from './LoadingSpinner'
-import ErrorMessage from './ErrorMessage'
+import MoreOptionsMenu from './MoreOptionsMenu'
+import AddCategoryModal from './AddCategoryModal'
+import CategoryModal from './AddCategoryModal'
+import { MoreVertical , Plus} from 'lucide-react';
+ModuleRegistry.registerModules([AllCommunityModule])
 
-const MutualFundTable = () => {
-    const [currentPage, setCurrentPage] = useState(1)
-    const [searchQuery, setSearchQuery] = useState('')
-    const [limit] = useState(10) // Number of items per page
+const PAGE_SIZE = 100
 
-    const { data, loading, error, refetch } = useMutualFunds({
-        page: currentPage,
-        limit,
-        search: searchQuery,
-    })
+export default function MutualFundsPage() {
+    const [search, setSearch] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
+    const { data, loading, error } = useMutualFunds({ page: 1, limit: 14000 })
+    const [modalOpen, setModalOpen] = useState(false)
+const [selectedFund, setSelectedFund] = useState(null)
 
-    const handleSearch = useCallback((query) => {
-        setSearchQuery(query)
-        setCurrentPage(1) // Reset to first page when searching
-    }, [])
-
-    const handlePageChange = useCallback((page) => {
-        setCurrentPage(page)
-    }, [])
-
-    const handleRefresh = useCallback(() => {
-        refetch()
-    }, [refetch])
-
-    if (loading && !data) {
-        return <LoadingSpinner />
-    }
-
-    if (error) {
-        return <ErrorMessage message={error} onRetry={handleRefresh} />
-    }
-
-    const { mutualFunds = [], totalCount = 0, totalPages = 0 } = data || {}
-
-    return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="relative bg-white rounded-lg shadow-lg overflow-hidden">
-                {/* Header Section */}
-                <div className="px-6 py-4 border-b border-gray-200">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-4">
-                        Mutual Funds ({totalCount} funds)
-                    </h1>
-
-                    {/* Search Bar */}
-                    <SearchBar
-                        onSearch={handleSearch}
-                        placeholder="Search by fund name, ISIN, or category..."
-                        className="w-full max-w-md"
-                    />
-                </div>
-
-                {/* Table Section */}
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <TableHeader />
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {mutualFunds.length > 0 ? (
-                                mutualFunds.map((fund, index) => (
-                                    <MutualFundTableRow
-                                        key={fund.isin || index}
-                                        fund={fund}
-                                        index={index}
-                                    />
-                                ))
-                            ) : (
-                                <tr>
-                                    <td
-                                        colSpan="7"
-                                        className="px-6 py-8 text-center text-gray-500"
-                                    >
-                                        {searchQuery
-                                            ? 'No mutual funds found for your search.'
-                                            : 'No mutual funds available.'}
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination Section */}
-                {totalPages > 1 && (
-                    <div className="px-6 py-4 border-t border-gray-200">
-                        <Pagination
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={handlePageChange}
-                            totalItems={totalCount}
-                            itemsPerPage={limit}
-                        />
-                    </div>
-                )}
-
-                {/* Simple Previous/Next Navigation */}
-                {totalPages > 1 && (
-                    <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                        <div className="flex items-center justify-between">
-                            <button
-                                onClick={() =>
-                                    handlePageChange(currentPage - 1)
-                                }
-                                disabled={currentPage <= 1}
-                                className={`
-                                    inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
-                                    ${
-                                        currentPage <= 1
-                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:text-gray-900 shadow-sm'
-                                    }
-                                `}
-                            >
-                                <svg
-                                    className="mr-2 h-4 w-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M15 19l-7-7 7-7"
-                                    />
-                                </svg>
-                                Previous
-                            </button>
-
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                <span>
-                                    Page {currentPage} of {totalPages}
-                                </span>
-                                <span className="text-gray-400">•</span>
-                                <span>{totalCount} total items</span>
-                            </div>
-
-                            <button
-                                onClick={() =>
-                                    handlePageChange(currentPage + 1)
-                                }
-                                disabled={currentPage >= totalPages}
-                                className={`
-                                    inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
-                                    ${
-                                        currentPage >= totalPages
-                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:text-gray-900 shadow-sm'
-                                    }
-                                `}
-                            >
-                                Next
-                                <svg
-                                    className="ml-2 h-4 w-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 5l7 7-7 7"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Loading overlay for subsequent requests */}
-                {loading && data && (
-                    <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-                        <LoadingSpinner size="sm" />
-                    </div>
-                )}
-            </div>
-        </div>
-    )
+const handleAddCategory = (fund) => {
+  setSelectedFund(fund)
+  setModalOpen(true)
 }
 
-export default MutualFundTable
+const handleSaveCategory = async (fund, category) => {
+    if (!category || category.trim() === '') return
+  
+    try {
+      await fetch(`/api/mutualfunds/${fund._id}/category`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: category.trim() }),
+      })
+      // Optionally: refresh data or update local state here
+    } catch (err) {
+      console.error('Failed to add category', err)
+    }
+  }
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(search)
+        }, 300)
+        return () => clearTimeout(handler)
+    }, [search])
+
+    const columnDefs = [
+        { headerName: 'ISIN', field: 'isin' },
+        { headerName: 'Name', field: 'name', flex: 1 },
+        {
+            headerName: 'Category',
+            field: 'category',
+            valueFormatter: ({ value }) =>
+                Array.isArray(value) ? value.join(', ') : '',
+            flex: 1,
+        },
+        { headerName: 'NAV', field: 'nav' },
+        {
+            headerName: 'Date',
+            field: 'navDate',
+            valueFormatter: ({ value }) =>
+                value ? new Date(value).toLocaleDateString() : '',
+        },
+
+        {
+            headerName: '',
+            field: 'actions',
+            cellRenderer: ({ data }) => (
+              <button
+                    onClick={() => {handleAddCategory(data) ; console.log("clicked")}}
+                className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
+              >
+                <Plus size={16} className="mr-1" />
+                Add Category
+              </button>
+            ),
+            width: 160,
+          }
+        
+
+    ]
+
+    const filteredData = useMemo(() => {
+        if (!search) return data?.mutualFunds || []
+        const searchLower = search.toLowerCase()
+        return (data?.mutualFunds || []).filter((fund) =>
+            fund.name?.toLowerCase().includes(searchLower) ||
+            fund.isin?.toLowerCase().includes(searchLower)
+        )
+    }, [search, data])
+
+    return (
+        <div className="ag-theme-alpine text-black bg-white p-4">
+            <h2 className="text-xl mb-4 font-semibold">Mutual Funds</h2>
+
+            <input
+                type="text"
+                placeholder="Search by Name or ISIN"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="border px-3 py-2 rounded w-full max-w-md mb-4"
+            />
+
+            {loading && <p>Loading...</p>}
+            {error && <p className="text-red-500">Error: {error}</p>}
+
+            <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
+                <AgGridReact
+                    rowData={filteredData}
+                    columnDefs={columnDefs}
+                    pagination={true}
+                    paginationPageSize={PAGE_SIZE}
+                    domLayout="autoHeight"
+                />
+            </div>
+            <CategoryModal
+  fund={selectedFund}
+  isOpen={modalOpen}
+  onClose={() => setModalOpen(false)}
+  onSave={(fund, category) => {
+    handleSaveCategory(fund, category)
+    setModalOpen(false)
+  }}
+/>
+
+        </div>
+        
+    )
+    
+
+}

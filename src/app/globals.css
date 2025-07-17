@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+.ag-theme-alpine {
+  --ag-foreground-color: #000000; /* black text */
+  --ag-background-color: #ffffff; /* white background */
+  --ag-header-foreground-color: #000000;
+  --ag-header-background-color: #f1f1f1;
+}
